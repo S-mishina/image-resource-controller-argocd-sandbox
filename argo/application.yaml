@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/UserName/sample_repo
     targetRevision: HEAD
-    path: manifests
+    path: ./gitops/
   destination:
     server: https://kubernetes.default.svc
     namespace: default

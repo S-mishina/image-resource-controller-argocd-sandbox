@@ -23,10 +23,6 @@
 
 今回は[image-resource-controller](https://github.com/S-mishina/image-resource-controller)のMakeコマンド使って環境を立ち上げ、そこにArgoCDを別途でインストールするような形で環境を作ります。
 
-## 利用方法
-
-このセクションでは、image-resource-controller-argocd-sandboxの具体的な利用手順について説明します。
-
 ### (1). リポジトリのインストール
 
 ```bash:bash
@@ -248,4 +244,16 @@ kubectl label secret private-repo -n argocd argocd.argoproj.io/secret-type=repos
 
 ※本番環境ではこのやり方はやめてください。
 
-ここまでで、Argoの設定は終わったので次に進みたいと思います。
+### (5). 大元のapplicationリソースを導入
+
+[image-resource-controller](https://github.com/S-mishina/image-resource-controller)によって作られたapplicationリソースを使ってArgoCDがアプリケーションを導入できるように大元のapplicationリソースを作成します。
+
+ここでは、本来適切なresourceをapplyするべきですが、秘匿情報があるためサンプルコマンドを記載します。
+
+```bash:bash
+kustomize build argo_your_folder/ | kubectl apply -f -
+```
+
+![image2](./image/image2.png)
+
+※現状は`./gitops/`フォルダーが存在しないためエラーになりますが、作成されるとエラーはなくなるはずです。
