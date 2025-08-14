@@ -17,6 +17,55 @@ This repository provides a comprehensive guide on how to use [image-resource-con
 
 **Goal:** Enable developers to deploy mock servers on Kubernetes by simply pushing container images, eliminating manual YAML creation.
 
+## Architecture & Workflow
+
+```mermaid
+graph TB
+    Dev[👨‍💻 Developer] --> |1 Push Image| ECR[📦 Container Registry<br/>ECR]
+    ECR --> |2 Image Detection| IRC[🤖 image-resource-controller]
+    IRC --> |3 Generate YAML| YAML[📄 Kubernetes Resources]
+    IRC --> |4 Git Commit| Git[📚 Git Repository]
+    Git --> |5 ArgoCD Sync| ArgoCD[🔄 ArgoCD]
+    ArgoCD --> |6 Deploy| K8s[☸️ Kubernetes Cluster]
+    
+    Dev --> |7 Push New Version| ECR2[📦 New Image Version]
+    ECR2 --> |8 Detect Update| AIU[🔍 Argo CD Image Updater]
+    AIU --> |9 Update kustomization| Git
+    Git --> |10 Auto Sync| ArgoCD
+    
+    subgraph "Initial Deployment Flow"
+        ECR
+        IRC
+        YAML
+    end
+    
+    subgraph "Update Flow"
+        ECR2
+        AIU
+    end
+    
+    subgraph "GitOps Pipeline"
+        Git
+        ArgoCD
+        K8s
+    end
+    
+    classDef primary fill:#e1f5fe
+    classDef secondary fill:#f3e5f5
+    classDef success fill:#e8f5e8
+    
+    class ECR,ECR2 primary
+    class IRC,AIU secondary
+    class Git,ArgoCD,K8s success
+```
+
+**Key Benefits:**
+
+- 🚀 **Zero Manual YAML**: Developers only push container images
+- 📝 **Full GitOps Traceability**: All changes tracked through Git commits  
+- 🔄 **Automatic Updates**: Smart detection and deployment of new versions
+- 🛡️ **Duplicate Prevention**: Intelligent resource management
+
 ## Environment Setup
 
 We'll use the Make commands from [image-resource-controller](https://github.com/S-mishina/image-resource-controller) to set up the environment, then install ArgoCD separately.
