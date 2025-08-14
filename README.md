@@ -671,3 +671,10 @@ Events:                    <none>
 [image-resource-controller](https://github.com/S-mishina/image-resource-controller)はすでに実環境にすでに存在するimageかどうかを半断してcommitを作っているためresourceは今回の場合作成されません。
 
 その代わり、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)によってリソースの変更が行われます。
+
+![image11](./image/image11.png)
+
+上記のようにpushされることされることで、ArgoCDが発火します。
+
+![image12](./image/image12.png)
+
