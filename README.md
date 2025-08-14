@@ -429,7 +429,22 @@ Image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-1" with ID 
 ### (1). [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の導入
 
 ```bash:bash
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/stable/manifests/install.yaml
+kubectl get secret aws-credentials -n default -o yaml | \
+  sed 's/namespace: default/namespace: argocd/' | \
+  kubectl apply -f -
+```
+
+```bash:bash
+ ❯ kubectl apply -k argocd-image-updater/
+serviceaccount/argocd-image-updater created
+role.rbac.authorization.k8s.io/argocd-image-updater created
+clusterrole.rbac.authorization.k8s.io/argocd-image-updater created
+rolebinding.rbac.authorization.k8s.io/argocd-image-updater created
+clusterrolebinding.rbac.authorization.k8s.io/argocd-image-updater created
+configmap/argocd-image-updater-config created
+configmap/argocd-image-updater-ssh-config created
+secret/argocd-image-updater-secret created
+deployment.apps/argocd-image-updater created
 ```
 
 ref: [link](https://argocd-image-updater.readthedocs.io/en/stable/install/installation/)
@@ -498,10 +513,32 @@ index 531e413..7cbaad8 100644
      - resources-finalizer.argocd.argoproj.io
 +  annotations:
 +    argocd-image-updater.argoproj.io/image-list: my-mock-api=123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-^1
-+    argocd-image-updater.argoproj.io/my-mock-api.update-strategy: semver
++    argocd-image-updater.argoproj.io/my-mock-api.update-strategy: "digest"
  spec:
    project: default
-   source:
+@@ -14,6 +14,7 @@ spec:
+     repoURL: https://github.com/xxx
+     targetRevision: HEAD
+     path: ./application/
++    kustomize: {}
+   destination:
+     server: https://kubernetes.default.svc
+     namespace: default
+```
+
+またこのタイミングでkustomizeのサポートも行います。
+
+```bash:bash
+ ❯ cat application/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - application.yaml
+
+images:
+  - name: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api
+    newTag: dev-1
 ```
 
 ![image10](./image/image10.png)

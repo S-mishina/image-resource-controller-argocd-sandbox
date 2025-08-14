@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/stable/manifests/install.yaml
+
+namespace: argocd
+
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: argocd-image-updater
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: accessKeyId
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secretAccessKey
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: AWS_DEFAULT_REGION
+          value: "us-east-1"
