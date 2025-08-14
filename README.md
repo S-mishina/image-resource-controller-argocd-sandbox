@@ -436,12 +436,201 @@ ref: [link](https://argocd-image-updater.readthedocs.io/en/stable/install/instal
 
 ### (2). [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の設定
 
-xxx
+まずは、ECR用のTokenを発行します。
+
+```bash:bash
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+```
+
+```bash:bash
+kubectl create secret docker-registry ecr-registry-secret \
+  --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com \
+  --docker-username=AWS \
+  --docker-password=$(aws ecr get-login-password --region us-east-1) \
+  --namespace=argocd
+```
+
+次にConfigMapの作成を行います。
+
+```bash:bash
+
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: argocd-image-updater-config
+ namespace: argocd
+data:
+ registries.conf: |
+   registries:
+   - name: ECR
+     api_url: https://${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
+     prefix: ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
+     ping: yes
+     credentials: secret:argocd/ecr-registry-secret#.dockerconfigjson
+ log.level: debug
+EOF
+
+```
+
+※ これはKindなので、登録が必要なだけです。本番環境では実施しないでください。
+
+最後にargocd-image-updaterの再起動を行います。
+
+```bash:bash
+kubectl rollout restart deployment/argocd-image-updater -n argocd
+```
 
 ### (3). [ArgoCD](https://argo-cd.readthedocs.io/en/stable/)にpushされているresourceに修正を入れる
 
-xxx
+ここは、みなさんが使っているリポジトリの修正になるので、詳細には書けないのですが変更して差分だけここに記載しpushします。
+
+```bash:bash
+ ❯ git diff
+diff --git a/gitops/gitops_application.yaml b/gitops/gitops_application.yaml
+index 531e413..7cbaad8 100644
+--- a/gitops/gitops_application.yaml
++++ b/gitops/gitops_application.yaml
+@@ -5,6 +5,9 @@ metadata:
+   namespace: argocd
+   finalizers:
+     - resources-finalizer.argocd.argoproj.io
++  annotations:
++    argocd-image-updater.argoproj.io/image-list: my-mock-api=123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-^1
++    argocd-image-updater.argoproj.io/my-mock-api.update-strategy: semver
+ spec:
+   project: default
+   source:
+```
+
+![image10](./image/image10.png)
+
+```bash:bash
+ ❯ kubectl describe Application my-mock-api -n argocd
+Name:         my-mock-api
+Namespace:    argocd
+Labels:       <none>
+Annotations:  argocd-image-updater.argoproj.io/image-list: my-mock-api=123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-^1
+              argocd-image-updater.argoproj.io/my-mock-api.update-strategy: semver
+              argocd.argoproj.io/tracking-id: sample-app:argoproj.io/Application:argocd/my-mock-api
+```
+
+適用されてることが確認できました。
 
 ### (4). [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)の実行
 
-xxx
+最後に新しいimageタグを作成します。
+
+```bash:bash
+open-api-mock-build sample-api.yaml -i my-mock-api:dev-2 -r 123456789012.dkr.ecr.us-east-1.amazonaws.com
+
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: OpenAPI Container Build Tool
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Spec file: sample-api.yaml
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Image: my-mock-api:dev-2
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Port: 3000
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Registry: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Push to registry: True
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Verbose: False
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Starting OpenAPI specification validation
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Successfully completed OpenAPI specification validation
+2025-08-15 02:31:14 [INFO] open_api_mock_build.main: Starting container image build
+2025-08-15 02:31:16 [INFO] open_api_mock_build.main: Successfully completed container image build
+2025-08-15 02:31:16 [INFO] open_api_mock_build.main: Starting container image push
+2025-08-15 02:31:28 [INFO] open_api_mock_build.main: Successfully completed container image push
+2025-08-15 02:31:28 [INFO] open_api_mock_build.main: 🎉 All steps completed successfully!
+```
+
+[image-resource-controller](https://github.com/S-mishina/image-resource-controller)の動きを確認してみましょう。
+
+```bash:bash
+ ❯ kubectl get ImageDetected -A
+NAMESPACE   NAME                         AGE
+default     my-mock-api-dev-1-6c518827   81m
+default     my-mock-api-dev-2-6c518827   67s
+```
+
+```bash:bash
+ ❯ kubectl describe ImageDetected my-mock-api-dev-2-6c518827
+Name:         my-mock-api-dev-2-6c518827
+Namespace:    default
+Labels:       app.kubernetes.io/component=image-detected
+              app.kubernetes.io/name=image-resource-controller
+              automation.gitops.io/source=sandbox-image-resource-policy
+Annotations:  automation.gitops.io/source-policy: sandbox-image-resource-policy
+API Version:  automation.gitops.io/v1beta1
+Kind:         ImageDetected
+Metadata:
+  Creation Timestamp:  2025-08-14T17:31:30Z
+  Generation:          1
+  Managed Fields:
+    API Version:  automation.gitops.io/v1beta1
+    Fields Type:  FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .:
+          f:automation.gitops.io/source-policy:
+        f:labels:
+          .:
+          f:app.kubernetes.io/component:
+          f:app.kubernetes.io/name:
+          f:automation.gitops.io/source:
+      f:spec:
+        .:
+        f:detectedAt:
+        f:fullImageName:
+        f:imageDigest:
+        f:imageName:
+        f:imageTag:
+        f:sourcePolicy:
+          .:
+          f:name:
+          f:namespace:
+    Manager:      manager
+    Operation:    Update
+    Time:         2025-08-14T17:31:30Z
+    API Version:  automation.gitops.io/v1beta1
+    Fields Type:  FieldsV1
+    fieldsV1:
+      f:status:
+        .:
+        f:conditions:
+        f:phase:
+        f:resourceCreated:
+    Manager:         manager
+    Operation:       Update
+    Subresource:     status
+    Time:            2025-08-14T17:31:30Z
+  Resource Version:  67614
+  UID:               f837cb9b-e325-4c0e-94b8-141aaa97d383
+Spec:
+  Detected At:      2025-08-14T15:34:56Z
+  Full Image Name:  123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-2
+  Image Digest:     sha256:6c5188274e30e79ce0eb438fb55c3a4d16e0617070e6a137493d4403ded03d4a
+  Image Name:       my-mock-api
+  Image Tag:        dev-2
+  Source Policy:
+    Name:       sandbox-image-resource-policy
+    Namespace:  default
+Status:
+  Conditions:
+    Last Transition Time:  2025-08-14T17:31:30Z
+    Message:               Starting resource creation process
+    Reason:                Processing
+    Status:                True
+    Type:                  Processing
+    Last Transition Time:  2025-08-14T17:31:30Z
+    Message:               Duplicate resource creation prevented - image already deployed
+    Reason:                Completed
+    Status:                True
+    Type:                  Ready
+  Phase:                   Completed
+  Resource Created:        false
+Events:                    <none>
+```
+
+`Message`を見ると、`Duplicate resource creation prevented - image already deployed`と書かれています。
+[image-resource-controller](https://github.com/S-mishina/image-resource-controller)はすでに実環境にすでに存在するimageかどうかを半断してcommitを作っているためresourceは今回の場合作成されません。
+
+その代わり、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)によってリソースの変更が行われます。
