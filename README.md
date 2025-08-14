@@ -421,3 +421,27 @@ Image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-1" with ID 
 ![image9](./image/image9.png)
 
 実際にSyncされることを確認できました。
+
+## [image-resource-controller](https://github.com/S-mishina/image-resource-controller)と[ArgoCD](https://argo-cd.readthedocs.io/en/stable/)、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の連携
+
+次に、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)を連携させてImageが更新された時に[image-resource-controller](https://github.com/S-mishina/image-resource-controller)がどう動くかを確認しましょう。
+
+### (1). [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の導入
+
+```bash:bash
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/stable/manifests/install.yaml
+```
+
+ref: [link](https://argocd-image-updater.readthedocs.io/en/stable/install/installation/)
+
+### (2). [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の設定
+
+xxx
+
+### (3). [ArgoCD](https://argo-cd.readthedocs.io/en/stable/)にpushされているresourceに修正を入れる
+
+xxx
+
+### (4). [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)の実行
+
+xxx
