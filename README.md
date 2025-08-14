@@ -1,38 +1,35 @@
-# image-resource-controller-argocd-sandbox
+# Image Resource Controller with ArgoCD Sandbox
 
-## 概要
+This repository demonstrates how to integrate [image-resource-controller](https://github.com/S-mishina/image-resource-controller) with ArgoCD using practical examples.
 
-このリポジトリでは、[image-resource-controller](https://github.com/S-mishina/image-resource-controller)の使い方をArgocdを例にしてまとめます。
+## Overview
 
-## 利用するもの
+This repository provides a comprehensive guide on how to use [image-resource-controller](https://github.com/S-mishina/image-resource-controller) with ArgoCD as an example implementation.
 
-* [kind](https://kind.sigs.k8s.io/)
-  * Kubernetesをローカル環境で動かす
-* [ArgoCD](https://argo-cd.readthedocs.io/en/stable/)
-  * GitOpsツール
-* [image-resource-controller](https://github.com/S-mishina/image-resource-controller)
-  * 今回紹介するカスタムオペレーター
-* [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)
-  * imageを生成するツール
+## Technologies & Use Case
 
-## 公開想定するユースケース
+**Stack:**
 
-開発者が任意のタイミングでk8s上にMockserverを作りたいというユースケース
+- [kind](https://kind.sigs.k8s.io/) - Local Kubernetes environment
+- [ArgoCD](https://argo-cd.readthedocs.io/en/stable/) - GitOps continuous delivery
+- [image-resource-controller](https://github.com/S-mishina/image-resource-controller) - Custom operator for automated resource generation
+- [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build) - Container image generation tool
 
-## 環境構築
+**Goal:** Enable developers to deploy mock servers on Kubernetes by simply pushing container images, eliminating manual YAML creation.
 
-今回は[image-resource-controller](https://github.com/S-mishina/image-resource-controller)のMakeコマンド使って環境を立ち上げ、そこにArgoCDを別途でインストールするような形で環境を作ります。
+## Environment Setup
 
-### (1). リポジトリのインストール
+We'll use the Make commands from [image-resource-controller](https://github.com/S-mishina/image-resource-controller) to set up the environment, then install ArgoCD separately.
 
-```bash:bash
+### 1. Repository Installation
+
+```bash
 git clone git@github.com:S-mishina/image-resource-controller.git
 ```
 
-### (2). 環境構築
+### 2. Environment Setup
 
-```bash:bash
-arm64⚡️ ~/ghq/github.com/S-mishina/image-resource-controller  git: main  AWS: tcpip | ap-northeast-1 GCP: dev
+```bash
  ❯ make kind-create
 kind create cluster --name image-resource-controller
 Creating cluster "image-resource-controller" ...
@@ -50,9 +47,8 @@ kubectl cluster-info --context kind-image-resource-controller
 Not sure what to do next? 😅  Check out https://kind.sigs.k8s.io/docs/user/quick-start/
 ```
 
-```bash:bash
+```bash
 [kind-image-resource-controller|default] 
-arm64⚡️ ~/ghq/github.com/S-mishina/image-resource-controller  git: main  AWS: tcpip | ap-northeast-1 GCP: xxx
  ❯ make kind-dev
 docker build -t image-detection-controller:latest -f Dockerfile.detection .
 [+] Building 19.6s (17/17) FINISHED                                                   docker:desktop-linux
@@ -146,139 +142,63 @@ deployment.apps/image-detection-controller created
 deployment.apps/resource-creation-controller created
 ```
 
-ここまででcontrollerを含むKubertnes環境が完成しました。
+At this point, we have a complete Kubernetes environment with the controllers running.
 
-### (3). ArgoCDのインストール
+### 3. ArgoCD Installation
 
-```bash:bash
-[kind-image-resource-controller|default]
-arm64⚡️ ~/ghq/github.com/S-mishina/image-resource-controller  git: main  AWS: tcpip | ap-northeast-1 GCP: xxx
- ❯ kubectl create namespace argocd
+```bash
+❯ kubectl create namespace argocd
 namespace/argocd created
-[kind-image-resource-controller|default]
-arm64⚡️ ~/ghq/github.com/S-mishina/image-resource-controller  git: main  AWS: tcpip | ap-northeast-1 GCP: xxx
- ❯ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+❯ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 customresourcedefinition.apiextensions.k8s.io/applications.argoproj.io created
 customresourcedefinition.apiextensions.k8s.io/applicationsets.argoproj.io created
 customresourcedefinition.apiextensions.k8s.io/appprojects.argoproj.io created
 serviceaccount/argocd-application-controller created
 serviceaccount/argocd-applicationset-controller created
-serviceaccount/argocd-dex-server created
-serviceaccount/argocd-notifications-controller created
-serviceaccount/argocd-redis created
-serviceaccount/argocd-repo-server created
-serviceaccount/argocd-server created
-role.rbac.authorization.k8s.io/argocd-application-controller created
-role.rbac.authorization.k8s.io/argocd-applicationset-controller created
-role.rbac.authorization.k8s.io/argocd-dex-server created
-role.rbac.authorization.k8s.io/argocd-notifications-controller created
-role.rbac.authorization.k8s.io/argocd-redis created
-role.rbac.authorization.k8s.io/argocd-server created
-clusterrole.rbac.authorization.k8s.io/argocd-application-controller created
-clusterrole.rbac.authorization.k8s.io/argocd-applicationset-controller created
-clusterrole.rbac.authorization.k8s.io/argocd-server created
-rolebinding.rbac.authorization.k8s.io/argocd-application-controller created
-rolebinding.rbac.authorization.k8s.io/argocd-applicationset-controller created
-rolebinding.rbac.authorization.k8s.io/argocd-dex-server created
-rolebinding.rbac.authorization.k8s.io/argocd-notifications-controller created
-rolebinding.rbac.authorization.k8s.io/argocd-redis created
-rolebinding.rbac.authorization.k8s.io/argocd-server created
-clusterrolebinding.rbac.authorization.k8s.io/argocd-application-controller created
-clusterrolebinding.rbac.authorization.k8s.io/argocd-applicationset-controller created
-clusterrolebinding.rbac.authorization.k8s.io/argocd-server created
-configmap/argocd-cm created
-configmap/argocd-cmd-params-cm created
-configmap/argocd-gpg-keys-cm created
-configmap/argocd-notifications-cm created
-configmap/argocd-rbac-cm created
-configmap/argocd-ssh-known-hosts-cm created
-configmap/argocd-tls-certs-cm created
-secret/argocd-notifications-secret created
-secret/argocd-secret created
-service/argocd-applicationset-controller created
-service/argocd-dex-server created
-service/argocd-metrics created
-service/argocd-notifications-controller-metrics created
-service/argocd-redis created
-service/argocd-repo-server created
-service/argocd-server created
-service/argocd-server-metrics created
-deployment.apps/argocd-applicationset-controller created
-deployment.apps/argocd-dex-server created
-deployment.apps/argocd-notifications-controller created
-deployment.apps/argocd-redis created
-deployment.apps/argocd-repo-server created
+# ... (additional ArgoCD resources created)
 deployment.apps/argocd-server created
 statefulset.apps/argocd-application-controller created
-networkpolicy.networking.k8s.io/argocd-application-controller-network-policy created
-networkpolicy.networking.k8s.io/argocd-applicationset-controller-network-policy created
-networkpolicy.networking.k8s.io/argocd-dex-server-network-policy created
-networkpolicy.networking.k8s.io/argocd-notifications-controller-network-policy created
-networkpolicy.networking.k8s.io/argocd-redis-network-policy created
-networkpolicy.networking.k8s.io/argocd-repo-server-network-policy created
-networkpolicy.networking.k8s.io/argocd-server-network-policy created
+# ... (network policies created)
 ```
 
-ref: [link](https://argo-cd.readthedocs.io/en/stable/#quick-start)
+Reference: [ArgoCD Quick Start Guide](https://argo-cd.readthedocs.io/en/stable/#quick-start)
 
-### (4). ArgoのGit連携
+### 4. Git Integration & Base Application
 
-本来はGitの連携までしっかりと書きたいですが、このリポジトリではsample名を定義します。
+```bash
+kubectl apply -f configmap.yaml
 
-```bash:bash
-> kubectl apply -f configmap.yaml
-```
-
-```bash:bash
 kubectl create secret generic private-repo \
   -n argocd \
   --from-literal=type=git \
   --from-literal=url=https://github.com/sample_repo \
   --from-literal=password=$(gh auth token) \
   --from-literal=username=$(gh api user --jq .login)
----
+
 kubectl label secret private-repo -n argocd argocd.argoproj.io/secret-type=repository
-```
 
-![image](./image/image.png)
-
-※本番環境ではこのやり方はやめてください。
-
-### (5). 大元のapplicationリソースを導入
-
-[image-resource-controller](https://github.com/S-mishina/image-resource-controller)によって作られたapplicationリソースを使ってArgoCDがアプリケーションを導入できるように大元のapplicationリソースを作成します。
-
-ここでは、本来適切なresourceをapplyするべきですが、秘匿情報があるためサンプルコマンドを記載します。
-
-```bash:bash
 kustomize build argo_your_folder/ | kubectl apply -f -
 ```
 
+> **⚠️ Security Notice**: This method is for demonstration purposes only. Use proper secret management in production.
+
+![image](./image/image.png)
 ![image2](./image/image2.png)
 
-※現状は`./gitops/`フォルダーが存在しないためエラーになりますが、作成されるとエラーはなくなるはずです。
+## Integration Demo
 
-## [image-resource-controller](https://github.com/S-mishina/image-resource-controller)と[ArgoCD](https://argo-cd.readthedocs.io/en/stable/)の連携
-
-このsessionでは、[image-resource-controller](https://github.com/S-mishina/image-resource-controller)と[ArgoCD](https://argo-cd.readthedocs.io/en/stable/)の連携を行います。
-
-このprojectを実行するためにはECRとContainerが必要になりますが、このREADMEがMockServerを立ち上げた時を定義しているので、[open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)を使って説明しようと思います。
-
-### (1). 事前準備 ECRの作成
-
-ここでは、すでに作成されたことにして進みます。
-
-作ったリポジトリ
+### 1. Prerequisites - ECR Repository
 
 ![image3](./image/image3.png)
 
-### (2). [image-resource-controller](https://github.com/S-mishina/image-resource-controller)のCRDのApply
+### 2. Apply [image-resource-controller](https://github.com/S-mishina/image-resource-controller) CRDs
 
-[image-resource-controller](https://github.com/S-mishina/image-resource-controller)を利用するためには、AWSのクレデンシャルとGitHubのクレデンシャルが必要です。
+To use [image-resource-controller](https://github.com/S-mishina/image-resource-controller), you need AWS credentials and GitHub credentials.
 
-なので、事前にsecretを作成します。
+Create the necessary secrets beforehand:
 
-```bash:bash
+```bash
 # AWS
 kubectl create secret generic aws-credentials \
   --namespace=default \
@@ -286,30 +206,30 @@ kubectl create secret generic aws-credentials \
   --from-literal=secretAccessKey=xxx
 ```
 
-※本番ではやらないでください。
+> **⚠️ Production Warning**: Never use hardcoded credentials in production. Use proper secret management solutions.
 
-```bash:bash
-# Gtihub
+```bash
+# GitHub
 kubectl create secret generic git-credentials \
   --namespace=default \
   --from-literal=token=xxx
 ```
 
-※本番ではやらないでください。
+> **⚠️ Production Warning**: Never use hardcoded credentials in production. Use proper secret management solutions.
 
-ここまでで秘匿情報のApplyは完了したので実resourceのapplyを行いたいと思います。
+Now that we've applied the sensitive information, let's apply the actual resources:
 
-```bash:bash
+```bash
  ❯ kustomize build image-resource-controller_prd | kubectl apply -f -
 imageresourcepolicy.automation.gitops.io/sandbox-image-resource-policy created
 resourcetemplate.automation.gitops.io/sandbox-resource-template created
 ```
 
-### (3). [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)の実行
+### 3. Execute [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)
 
-2025/08/14現在[open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)を使うためには、リポジトリからpoetry buildしないといけないためリポジトリをcloneしコマンドを実行します。
+As of 2025/08/14, to use [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build), you need to clone the repository and run poetry build, so we'll clone the repository and execute the command.
 
-```bash:bash
+```bash
  ❯ open-api-mock-build sample-api.yaml -i my-mock-api:dev-1 -r 123456789012.dkr.ecr.us-east-1.amazonaws.com
 2025-08-15 00:34:59 [INFO] open_api_mock_build.main: OpenAPI Container Build Tool
 2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Spec file: sample-api.yaml
@@ -327,18 +247,18 @@ resourcetemplate.automation.gitops.io/sandbox-resource-template created
 2025-08-15 00:35:45 [INFO] open_api_mock_build.main: 🎉 All steps completed successfully!
 ```
 
-### (4). 動作確認
+### 4. Verification
 
-```bash:bash
+```bash
  ❯ kubectl get imagedetected
 NAME                         AGE
 my-mock-api-dev-1-6c518827   2m59s
 ```
 
-imagedetectedリソースが出来上がってることを確認しました。
-中身を見てみましょう。
+We can confirm that an imagedetected resource has been created.
+Let's examine its contents:
 
-```bash:bash
+```bash
  ❯ kubectl describe imagedetected my-mock-api-dev-1-6c518827
 Name:         my-mock-api-dev-1-6c518827
 Namespace:    default
@@ -381,60 +301,60 @@ Status:
 Events:                    <none>
 ```
 
-このログからコミットされたことがわかるので、GitHubを状態を見てみましょう。
+From this log we can see that it has been committed, so let's check the GitHub status.
 
 ![image4](./image/image4.png)
 
-commitされていることがわかったので、中身を見てみましょう。
+We can confirm it has been committed, so let's look at the contents.
 
 ![image5](./image/image5.png)
 
 ![image6](./image/image6.png)
 
-[image-resource-controller](https://github.com/S-mishina/image-resource-controller)から該当のリポジトリにpushされたことを確認できました。
+We can confirm that [image-resource-controller](https://github.com/S-mishina/image-resource-controller) has pushed to the corresponding repository.
 
-ここから、ArgoCDがどう動いてるかを確認します。
+Let's now check how ArgoCD is behaving.
 
 ![image7](./image/image7.png)
 
-GitHubにpushすると、ArgoCDで認識できていることを確認できました。
+When we push to GitHub, we can confirm that ArgoCD recognizes it.
 
-これをSyncすると、実際のresourceもSyncされるようになりました。
+When we sync this, the actual resources also get synced.
 
 ![image8](./image/image8.png)
 
-この検証では、kindを使っているためdefaultではECRからPullできず失敗状態になっています。
+In this verification, because we're using kind, by default we can't pull from ECR and it fails.
 
-```bash:bash
+```bash
  ❯ kubectl get pods
 NAME                                           READY   STATUS             RESTARTS   AGE
 test-my-mock-api-deployment-65f7774cdf-vz8nj   0/1     ImagePullBackOff   0
 ```
 
-なので、ECRからImagePullを行いKind loadしてClusterにImageを追加します。
+So we'll pull the image from ECR and use kind load to add the image to the cluster.
 
-```bash:bash
+```bash
  ❯ kind load docker-image 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-1 -n image-resource-controller
 Image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-1" with ID "sha256:72c1b4403b54fbce0e18b1edde53275fc2c52540db212e98d41a842890bcbc23" not yet present on node "image-resource-controller-control-plane", loading...
 ```
 
 ![image9](./image/image9.png)
 
-実際にSyncされることを確認できました。
+We can confirm that it actually gets synced.
 
-## [image-resource-controller](https://github.com/S-mishina/image-resource-controller)と[ArgoCD](https://argo-cd.readthedocs.io/en/stable/)、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の連携
+## Advanced Integration: Argo CD Image Updater
 
-次に、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)を連携させてImageが更新された時に[image-resource-controller](https://github.com/S-mishina/image-resource-controller)がどう動くかを確認しましょう。
+Let's integrate [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/) to handle automatic image updates.
 
-### (1). [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の導入
+### 1. Install [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)
 
-```bash:bash
+```bash
 kubectl get secret aws-credentials -n default -o yaml | \
   sed 's/namespace: default/namespace: argocd/' | \
   kubectl apply -f -
 ```
 
-```bash:bash
+```bash
  ❯ kubectl apply -k argocd-image-updater/
 serviceaccount/argocd-image-updater created
 role.rbac.authorization.k8s.io/argocd-image-updater created
@@ -447,18 +367,18 @@ secret/argocd-image-updater-secret created
 deployment.apps/argocd-image-updater created
 ```
 
-ref: [link](https://argocd-image-updater.readthedocs.io/en/stable/install/installation/)
+Reference: [Installation Guide](https://argocd-image-updater.readthedocs.io/en/stable/install/installation/)
 
-### (2). [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)の設定
+### 2. Configure [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)
 
-まずは、ECR用のTokenを発行します。
+First, generate an ECR token:
 
-```bash:bash
+```bash
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 ```
 
-```bash:bash
+```bash
 kubectl create secret docker-registry ecr-registry-secret \
   --docker-server=${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com \
   --docker-username=AWS \
@@ -466,9 +386,9 @@ kubectl create secret docker-registry ecr-registry-secret \
   --namespace=argocd
 ```
 
-次にConfigMapの作成を行います。
+Next, create the ConfigMap:
 
-```bash:bash
+```bash
 
 cat << EOF | kubectl apply -f -
 apiVersion: v1
@@ -489,19 +409,19 @@ EOF
 
 ```
 
-※ これはKindなので、登録が必要なだけです。本番環境では実施しないでください。
+> **💡 Development Note**: This configuration is specific to kind clusters. In production, use proper registry authentication through service accounts or IAM roles.
 
-最後にargocd-image-updaterの再起動を行います。
+Finally, restart argocd-image-updater:
 
-```bash:bash
+```bash
 kubectl rollout restart deployment/argocd-image-updater -n argocd
 ```
 
-### (3). [ArgoCD](https://argo-cd.readthedocs.io/en/stable/)にpushされているresourceに修正を入れる
+### 3. Modify Resources Pushed to [ArgoCD](https://argo-cd.readthedocs.io/en/stable/)
 
-ここは、みなさんが使っているリポジトリの修正になるので、詳細には書けないのですが変更して差分だけここに記載しpushします。
+This involves modifying the repository you're using, so we can't write the details, but we'll make changes and push, showing only the diff here:
 
-```bash:bash
+```bash
  ❯ git diff
 diff --git a/gitops/gitops_application.yaml b/gitops/gitops_application.yaml
 index 531e413..7cbaad8 100644
@@ -528,9 +448,9 @@ index 531e413..7cbaad8 100644
      namespace: default
 ```
 
-またこのタイミングでkustomizeのサポートも行います。
+We'll also add kustomize support at this point:
 
-```bash:bash
+```bash
  ❯ cat application/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -543,7 +463,7 @@ images:
     newTag: dev-1
 ```
 
-```bash:bash
+```bash
  ❯ kubectl describe Application my-mock-api -n argocd
 Name:         my-mock-api
 Namespace:    argocd
@@ -553,13 +473,13 @@ Annotations:  argocd-image-updater.argoproj.io/image-list: my-mock-api=123456789
               argocd.argoproj.io/tracking-id: sample-app:argoproj.io/Application:argocd/my-mock-api
 ```
 
-適用されてることが確認できました。
+We can confirm it's been applied.
 
-### (4). [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)の実行
+### 4. Execute [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)
 
-最後に新しいimageタグを作成します。
+Finally, let's create a new image tag:
 
-```bash:bash
+```bash
 open-api-mock-build sample-api.yaml -i my-mock-api:dev-2 -r 123456789012.dkr.ecr.us-east-1.amazonaws.com
 
 2025-08-15 02:31:14 [INFO] open_api_mock_build.main: OpenAPI Container Build Tool
@@ -578,16 +498,16 @@ open-api-mock-build sample-api.yaml -i my-mock-api:dev-2 -r 123456789012.dkr.ecr
 2025-08-15 02:31:28 [INFO] open_api_mock_build.main: 🎉 All steps completed successfully!
 ```
 
-[image-resource-controller](https://github.com/S-mishina/image-resource-controller)の動きを確認してみましょう。
+Let's check how [image-resource-controller](https://github.com/S-mishina/image-resource-controller) behaves:
 
-```bash:bash
+```bash
  ❯ kubectl get ImageDetected -A
 NAMESPACE   NAME                         AGE
 default     my-mock-api-dev-1-6c518827   81m
 default     my-mock-api-dev-2-6c518827   67s
 ```
 
-```bash:bash
+```bash
  ❯ kubectl describe ImageDetected my-mock-api-dev-2-6c518827
 Name:         my-mock-api-dev-2-6c518827
 Namespace:    default
@@ -667,14 +587,26 @@ Status:
 Events:                    <none>
 ```
 
-`Message`を見ると、`Duplicate resource creation prevented - image already deployed`と書かれています。
-[image-resource-controller](https://github.com/S-mishina/image-resource-controller)はすでに実環境にすでに存在するimageかどうかを半断してcommitを作っているためresourceは今回の場合作成されません。
+Looking at the `Message`, it says `Duplicate resource creation prevented - image already deployed`.
+[image-resource-controller](https://github.com/S-mishina/image-resource-controller) determines whether an image already exists in the actual environment and creates commits accordingly, so resources are not created in this case.
 
-その代わり、[Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)によってリソースの変更が行われます。
+Instead, resource changes are made by [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/).
 
 ![image11](./image/image11.png)
 
-上記のようにpushされることされることで、ArgoCDが発火します。
+By being pushed as shown above, ArgoCD is triggered.
 
 ![image12](./image/image12.png)
 
+## Conclusion
+
+This sandbox demonstrates a complete GitOps workflow that automates container deployment from image registry to Kubernetes cluster. By integrating image-resource-controller with ArgoCD and Argo CD Image Updater, we've created a system that:
+
+- **Eliminates Manual YAML Creation**: Developers only need to push container images
+- **Provides Full GitOps Traceability**: All changes are tracked through Git commits
+- **Enables Smart Resource Management**: Prevents duplicate deployments while allowing updates
+- **Supports Continuous Delivery**: Automatically detects and deploys new image versions
+
+The combination of these tools creates a powerful development workflow that bridges the gap between container image creation and Kubernetes deployment, making it easier for development teams to iterate quickly while maintaining proper GitOps practices.
+
+This sandbox serves as a foundation that can be extended and customized for various use cases, from development environments to production deployments, always keeping security best practices and proper credential management in mind.
