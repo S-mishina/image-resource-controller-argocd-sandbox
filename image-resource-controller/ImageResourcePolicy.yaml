@@ -1,0 +1,22 @@
+apiVersion: automation.gitops.io/v1beta1
+kind: ImageResourcePolicy
+metadata:
+  name: sandbox-image-resource-policy
+  namespace: default
+spec:
+  ecrRepository:
+    region: us-east-1
+    repositoryPattern: "my-mock-api"
+  policy:
+    pattern:
+      regex: "^(dev)-v\\d+\\.\\d+\\.\\d+$"
+      extractPrefix: true  # プレフィックス抽出ON
+  templateRef:
+    name: sandbox-resource-template
+    namespace: default
+  # AWS認証設定 - Access Key/Secret Key認証
+  aws:
+    secretRef:
+      name: aws-credentials
+  suspend: false
+  ttlDays: 14

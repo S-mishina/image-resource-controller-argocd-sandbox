@@ -1,0 +1,78 @@
+apiVersion: automation.gitops.io/v1beta1
+kind: ResourceTemplate
+metadata:
+  name: sandbox-resource-template
+  namespace: default
+spec:
+  multiFiles:
+    - name: application_yaml
+      relativePath: "application/application.yaml"
+      template: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: test-{{ .ServiceName }}-deployment
+          labels:
+            app: {{ .ServiceName }}
+            version: {{ .ImageTag }}
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: {{ .ServiceName }}
+          template:
+            metadata:
+              labels:
+                app: {{ .ServiceName }}
+            spec:
+              containers:
+              - name: {{ .ServiceName }}
+                image: {{ .FullImageName }}
+                ports:
+                - containerPort: 3000
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: test-{{ .ServiceName }}-service
+        spec:
+          selector:
+            app: {{ .ServiceName }}
+          ports:
+          - port: 3000
+            targetPort: 3000
+          type: ClusterIP
+    - name: argocd-application
+      relativePath: "gitops/gitops_application.yaml"
+      template: |
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: sample-app
+          namespace: argocd
+          finalizers:
+            - resources-finalizer.argocd.argoproj.io
+        spec:
+          project: default
+          source:
+            repoURL: https://github.com/<YourName>/<YourRepo>
+            targetRevision: HEAD
+            path: ./gitops/
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: default
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
+
+
+  # Git設定
+  gitRepository:
+    url: "https://github.com/<YoureName>/<YourRepo>.git"
+    path: "./"
+    branch: "main"
+    secretRef:
+      name: git-credentials

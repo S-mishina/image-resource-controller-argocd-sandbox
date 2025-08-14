@@ -2,7 +2,7 @@
 
 ## 概要
 
-このリポジトリでは、image-resource-controllerの使い方をArgocdを例にしてまとめます。
+このリポジトリでは、[image-resource-controller](https://github.com/S-mishina/image-resource-controller)の使い方をArgocdを例にしてまとめます。
 
 ## 利用するもの
 
@@ -257,3 +257,147 @@ kustomize build argo_your_folder/ | kubectl apply -f -
 ![image2](./image/image2.png)
 
 ※現状は`./gitops/`フォルダーが存在しないためエラーになりますが、作成されるとエラーはなくなるはずです。
+
+## [image-resource-controller](https://github.com/S-mishina/image-resource-controller)と[ArgoCD](https://argo-cd.readthedocs.io/en/stable/)の連携
+
+このsessionでは、[image-resource-controller](https://github.com/S-mishina/image-resource-controller)と[ArgoCD](https://argo-cd.readthedocs.io/en/stable/)の連携を行います。
+
+このprojectを実行するためにはECRとContainerが必要になりますが、このREADMEがMockServerを立ち上げた時を定義しているので、[open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)を使って説明しようと思います。
+
+### (1). 事前準備 ECRの作成
+
+ここでは、すでに作成されたことにして進みます。
+
+作ったリポジトリ
+
+![image3](./image/image3.png)
+
+### (2). [image-resource-controller](https://github.com/S-mishina/image-resource-controller)のCRDのApply
+
+[image-resource-controller](https://github.com/S-mishina/image-resource-controller)を利用するためには、AWSのクレデンシャルとGitHubのクレデンシャルが必要です。
+
+なので、事前にsecretを作成します。
+
+```bash:bash
+# AWS
+kubectl create secret generic aws-credentials \
+  --namespace=default \
+  --from-literal=accessKeyId=xxx \
+  --from-literal=secretAccessKey=xxx
+```
+
+※本番ではやらないでください。
+
+```bash:bash
+# Gtihub
+kubectl create secret generic git-credentials \
+  --namespace=default \
+  --from-literal=token=xxx
+```
+
+※本番ではやらないでください。
+
+ここまでで秘匿情報のApplyは完了したので実resourceのapplyを行いたいと思います。
+
+```bash:bash
+ ❯ kustomize build image-resource-controller_prd | kubectl apply -f -
+imageresourcepolicy.automation.gitops.io/sandbox-image-resource-policy created
+resourcetemplate.automation.gitops.io/sandbox-resource-template created
+```
+
+### (3). [open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)の実行
+
+2025/08/14現在[open-api-mock-build](https://github.com/S-mishina/open-api-mock-build)を使うためには、リポジトリからpoetry buildしないといけないためリポジトリをcloneしコマンドを実行します。
+
+```bash:bash
+ ❯ open-api-mock-build sample-api.yaml -i my-mock-api:dev-1 -r 123456789012.dkr.ecr.us-east-1.amazonaws.com
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: OpenAPI Container Build Tool
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Spec file: sample-api.yaml
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Image: my-mock-api:dev-1
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Port: 3000
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Registry: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Push to registry: True
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Verbose: False
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Starting OpenAPI specification validation
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Successfully completed OpenAPI specification validation
+2025-08-15 00:34:59 [INFO] open_api_mock_build.main: Starting container image build
+2025-08-15 00:35:00 [INFO] open_api_mock_build.main: Successfully completed container image build
+2025-08-15 00:35:00 [INFO] open_api_mock_build.main: Starting container image push
+2025-08-15 00:35:45 [INFO] open_api_mock_build.main: Successfully completed container image push
+2025-08-15 00:35:45 [INFO] open_api_mock_build.main: 🎉 All steps completed successfully!
+```
+
+### (4). 動作確認
+
+```bash:bash
+ ❯ kubectl get imagedetected
+NAME                         AGE
+my-mock-api-dev-1-6c518827   2m59s
+```
+
+imagedetectedリソースが出来上がってることを確認しました。
+中身を見てみましょう。
+
+```bash:bash
+ ❯ kubectl describe imagedetected my-mock-api-dev-1-6c518827
+Name:         my-mock-api-dev-1-6c518827
+Namespace:    default
+Labels:       app.kubernetes.io/component=image-detected
+              app.kubernetes.io/name=image-resource-controller
+              automation.gitops.io/source=sandbox-image-resource-policy
+Annotations:  automation.gitops.io/source-policy: sandbox-image-resource-policy
+API Version:  automation.gitops.io/v1beta1
+Kind:         ImageDetected
+Metadata:
+  Creation Timestamp:  2025-08-14T15:51:02Z
+  Generation:          1
+  Resource Version:    50446
+  UID:                 f1dd1c48-0dc5-4956-89c8-e8a778a1e387
+Spec:
+  Detected At:      2025-08-14T15:34:56Z
+  Full Image Name:  123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-1
+  Image Digest:     sha256:6c51xxx
+  Image Name:       my-mock-api
+  Image Tag:        dev-1
+  Source Policy:
+    Name:       sandbox-image-resource-policy
+    Namespace:  default
+Status:
+  Conditions:
+    Last Transition Time:  2025-08-14T15:51:02Z
+    Message:               Starting resource creation process
+    Reason:                Processing
+    Status:                True
+    Type:                  Processing
+    Last Transition Time:  2025-08-14T15:51:03Z
+    Message:               Successfully created resources and committed to Git
+    Reason:                Completed
+    Status:                True
+    Type:                  Ready
+  Git Commit SHA:          9ebd
+  Phase:                   Completed
+  Processed At:            2025-08-14T15:51:03Z
+  Resource Created:        true
+Events:                    <none>
+```
+
+このログからコミットされたことがわかるので、GitHubを状態を見てみましょう。
+
+![image4](./image/image4.png)
+
+commitされていることがわかったので、中身を見てみましょう。
+
+![image5](./image/image5.png)
+
+![image6](./image/image6.png)
+
+[image-resource-controller](https://github.com/S-mishina/image-resource-controller)から該当のリポジトリに導入されたことを確認できました。
+
+ここから、ArgoCDがどう動いてるかを確認します。
+
+![image7](./image/image7.png)
+
+GitHubにpushすると、ArgoCDで認識できていることを確認できました。
+
+
+
