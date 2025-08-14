@@ -512,8 +512,10 @@ index 531e413..7cbaad8 100644
    finalizers:
      - resources-finalizer.argocd.argoproj.io
 +  annotations:
-+    argocd-image-updater.argoproj.io/image-list: my-mock-api=123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-^1
-+    argocd-image-updater.argoproj.io/my-mock-api.update-strategy: "digest"
++    argocd-image-updater.argoproj.io/image-list: my-mock-api=123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api:dev-1
++    argocd-image-updater.argoproj.io/my-mock-api.update-strategy: "name"
++    argocd-image-updater.argoproj.io/my-mock-api.allow-tags: "regexp:^dev-[0-9]+$"
++    argocd-image-updater.argoproj.io/write-back-method: git
  spec:
    project: default
 @@ -14,6 +14,7 @@ spec:
@@ -540,8 +542,6 @@ images:
   - name: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-mock-api
     newTag: dev-1
 ```
-
-![image10](./image/image10.png)
 
 ```bash:bash
  ❯ kubectl describe Application my-mock-api -n argocd
